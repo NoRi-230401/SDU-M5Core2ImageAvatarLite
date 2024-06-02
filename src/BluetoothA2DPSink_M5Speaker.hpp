@@ -16,7 +16,8 @@ public:
   BluetoothA2DPSink_M5Speaker(m5::Speaker_Class* m5sound, uint8_t virtual_channel = 0)
   : BluetoothA2DPSink()
   {
-    is_output = false; // I2S control by BluetoothA2DPSink is not required.
+    // is_output = false; // I2S control by BluetoothA2DPSink is not required.
+    is_i2s_output = false; // I2S control by BluetoothA2DPSink is not 
     _virtual_channel = virtual_channel;
   }
 

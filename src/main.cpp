@@ -1,112 +1,129 @@
-#if defined( ARDUINO )
+#if defined(ARDUINO)
 #include <Arduino.h>
 #include <SD.h>
 #include <SPIFFS.h>
 #endif
 
 #include <M5Unified.h>
-
-#define SDU_APP_PATH "/M5Core2AvatarLite.bin" // title for SD-Updater UI
-#define SDU_APP_NAME "Image Avater Lite" // title for SD-Updater UI
-#include <M5StackUpdater.h> // https://github.com/tobozo/M5Stack-SD-Updater/
-
+// #define SDU_APP_PATH "/M5Core2AvatarLite.bin" // title for SD-Updater UI
+// #define SDU_APP_NAME "Image Avater Lite"      // title for SD-Updater UI
+// #include <M5StackUpdater.h>                   // https://github.com/tobozo/M5Stack-SD-Updater/
 #include "M5ImageAvatarLite.h"
-#include "ImageAvatarSystemConfig.h" 
+#include "ImageAvatarSystemConfig.h"
 
 // サーボを利用しない場合は下記の1行をコメントアウトしてください。
 #define USE_SERVO
 
 // M5GoBottomのLEDを使わない場合は下記の1行をコメントアウトしてください。
 #define USE_LED
-//#define USE_LED_OUT
+// #define USE_LED_OUT
 
 // デバッグしたいときは下記の１行コメントアウトしてください。
-//#define DEBUG
+// #define DEBUG
 
-M5GFX &gfx( M5.Lcd ); // aliasing is better than spawning two instances of LGFX
+// --------------------------------------
+//  "SDU.cpp"  ---  by NoRi 2024-06-02
+// --------------------------------------
+bool USE_SERVO_ST = false; // use this status insted of "#define USE_SERVO"
+bool USE_LED_ST = false;   // use this status insted of "#define USE_LED"
+extern bool servoTxtSDRead();
+extern bool ledTxtSDRead();
+extern void SDU_lobby();
+// --------------------------------------
+
+M5GFX &gfx(M5.Lcd); // aliasing is better than spawning two instances of LGFX
 
 // JSONファイルとBMPファイルを置く場所を切り替え
 // 開発時はSPIFFS上に置いてUploadするとSDカードを抜き差しする手間が省けます。
 fs::FS json_fs = SD; // JSONファイルの収納場所(SPIFFS or SD)
-fs::FS bmp_fs  = SD; // BMPファイルの収納場所(SPIFFS or SD)
+fs::FS bmp_fs = SD;  // BMPファイルの収納場所(SPIFFS or SD)
 
 using namespace m5imageavatar;
 
-
 ImageAvatarSystemConfig system_config;
-const char* avatar_system_json = "/json/M5AvatarLiteSystem.json"; // ファイル名は32バイトを超えると不具合が起きる場合あり
+const char *avatar_system_json = "/json/M5AvatarLiteSystem.json"; // ファイル名は32バイトを超えると不具合が起きる場合あり
 uint8_t avatar_count = 0;
 ImageAvatarLite avatar(json_fs, bmp_fs);
 #ifdef USE_SERVO
-  #include "ImageAvatarServo.h"
-  ImageAvatarServo servo;
-  bool servo_enable = true; // サーボを動かすかどうか
-  TaskHandle_t servoloopTaskHangle;
+#include "ImageAvatarServo.h"
+ImageAvatarServo servo;
+bool servo_enable = true; // サーボを動かすかどうか
+TaskHandle_t servoloopTaskHangle;
 #endif
 
 #ifdef USE_LED
-   #include <FastLED.h>
-  #define NUM_LEDS 10
-  #ifdef USE_LED_OUT
-  #define LED_PIN_OUT 26
-  #define NUM_LED_OUT 37
-  #endif 
+#include <FastLED.h>
+#define NUM_LEDS 10
+#ifdef USE_LED_OUT
+#define LED_PIN_OUT 26
+#define NUM_LED_OUT 37
+#endif
 #ifdef ARDUINO_M5STACK_FIRE
-  #define LED_PIN 15
+#define LED_PIN 15
 #else
-  #define LED_PIN 25
+#define LED_PIN 25
 #endif
-  CRGB leds[NUM_LEDS];
-  #ifdef USE_LED_OUT
-  CRGB leds_out[NUM_LED_OUT];
-  #endif
-
-  CHSV red (0, 255, 255);
-  CHSV green (95, 255, 255);
-  CHSV blue (160, 255, 255);
-  CHSV magenta (210, 255, 255);
-  CHSV yellow (45, 255, 255);
-  CHSV hsv_table[5] = { blue, green, yellow, magenta, red };
-  CHSV hsv_table_out[5] = { blue, green, yellow, magenta, red }; //red, magenta, yellow, green, blue };
-  void turn_off_led() {
-    // Now turn the LED off, then pause
-    for(int i=0;i<NUM_LEDS;i++) leds[i] = CRGB::Black;
-    #ifdef USE_LED_OUT
-    for(int i=0;i<NUM_LED_OUT;i++) leds_out[i] = CRGB::Black;
-    #endif
-    FastLED.show();  
-  }
-
-  void clear_led_buff() {
-    // Now turn the LED off, then pause
-    for(int i=0;i<NUM_LEDS;i++) leds[i] =  CRGB::Black;
-    #ifdef USE_LED_OUT
-    for(int i=0;i<NUM_LED_OUT;i++) leds_out[i] = CRGB::Black;
-    #endif
-  }
-
-  void level_led(int level1, int level2) {  
-  if(level1 > 5) level1 = 5;
-  if(level2 > 5) level2 = 5;
-    
-    clear_led_buff(); 
-    for(int i=0;i<level1;i++){
-      fill_gradient(leds, 0, hsv_table[i], 4, hsv_table[0] );
-      #ifdef USE_LED_OUT
-      fill_gradient(leds_out, 0, hsv_table_out[0], 18, hsv_table_out[i] );
-      #endif
-    }
-    for(int i=0;i<level2;i++){
-      fill_gradient(leds, 5, hsv_table[0], 9, hsv_table[i] );
-      #ifdef USE_LED_OUT
-      fill_gradient(leds_out, 19, hsv_table_out[i], 36, hsv_table_out[0] );
-      #endif
-    }
-    FastLED.show();
-  }
-
+CRGB leds[NUM_LEDS];
+#ifdef USE_LED_OUT
+CRGB leds_out[NUM_LED_OUT];
 #endif
 
+CHSV red(0, 255, 255);
+CHSV green(95, 255, 255);
+CHSV blue(160, 255, 255);
+CHSV magenta(210, 255, 255);
+CHSV yellow(45, 255, 255);
+CHSV hsv_table[5] = {blue, green, yellow, magenta, red};
+CHSV hsv_table_out[5] = {blue, green, yellow, magenta, red}; // red, magenta, yellow, green, blue };
+void turn_off_led()
+{
+  // Now turn the LED off, then pause
+  for (int i = 0; i < NUM_LEDS; i++)
+    leds[i] = CRGB::Black;
+#ifdef USE_LED_OUT
+  for (int i = 0; i < NUM_LED_OUT; i++)
+    leds_out[i] = CRGB::Black;
+#endif
+  FastLED.show();
+}
+
+void clear_led_buff()
+{
+  // Now turn the LED off, then pause
+  for (int i = 0; i < NUM_LEDS; i++)
+    leds[i] = CRGB::Black;
+#ifdef USE_LED_OUT
+  for (int i = 0; i < NUM_LED_OUT; i++)
+    leds_out[i] = CRGB::Black;
+#endif
+}
+
+void level_led(int level1, int level2)
+{
+  if (level1 > 5)
+    level1 = 5;
+  if (level2 > 5)
+    level2 = 5;
+
+  clear_led_buff();
+  for (int i = 0; i < level1; i++)
+  {
+    fill_gradient(leds, 0, hsv_table[i], 4, hsv_table[0]);
+#ifdef USE_LED_OUT
+    fill_gradient(leds_out, 0, hsv_table_out[0], 18, hsv_table_out[i]);
+#endif
+  }
+  for (int i = 0; i < level2; i++)
+  {
+    fill_gradient(leds, 5, hsv_table[0], 9, hsv_table[i]);
+#ifdef USE_LED_OUT
+    fill_gradient(leds_out, 19, hsv_table_out[i], 36, hsv_table_out[0]);
+#endif
+  }
+  FastLED.show();
+}
+
+#endif
 
 #include "BluetoothA2DPSink_M5Speaker.hpp"
 #define LIPSYNC_LEVEL_MAX 10.0f
@@ -116,37 +133,37 @@ float mouth_ratio = 0.0f;
 bool sing_happy = true;
 
 // ----- あまり間隔を短くしすぎるとサーボが壊れやすくなるので注意(単位:msec)
-static long interval_min      = 1000;        // 待機時インターバル最小
-static long interval_max      = 10000;       // 待機時インターバル最大
-static long interval_move_min = 500;         // 待機時のサーボ移動時間最小
-static long interval_move_max = 1500;        // 待機時のサーボ移動時間最大
-static long sing_interval_min = 500;         // 歌うモードのインターバル最小
-static long sing_interval_max = 1500;        // 歌うモードのインターバル最大
-static long sing_move_min     = 500;         // 歌うモードのサーボ移動時間最小
-static long sing_move_max     = 1500;        // 歌うモードのサーボ移動時間最大
+static long interval_min = 1000;      // 待機時インターバル最小
+static long interval_max = 10000;     // 待機時インターバル最大
+static long interval_move_min = 500;  // 待機時のサーボ移動時間最小
+static long interval_move_max = 1500; // 待機時のサーボ移動時間最大
+static long sing_interval_min = 500;  // 歌うモードのインターバル最小
+static long sing_interval_max = 1500; // 歌うモードのインターバル最大
+static long sing_move_min = 500;      // 歌うモードのサーボ移動時間最小
+static long sing_move_max = 1500;     // 歌うモードのサーボ移動時間最大
 // サーボ関連の設定 end
 // --------------------
-
 
 /// set M5Speaker virtual channel (0-7)
 static constexpr uint8_t m5spk_virtual_channel = 0;
 
-static BluetoothA2DPSink_M5Speaker a2dp_sink = { &M5.Speaker, m5spk_virtual_channel };
+static BluetoothA2DPSink_M5Speaker a2dp_sink = {&M5.Speaker, m5spk_virtual_channel};
 static fft_t fft;
 static constexpr size_t WAVE_SIZE = 320;
 static int16_t raw_data[WAVE_SIZE * 2];
 
-// auto poweroff 
-uint32_t auto_power_off_time = 0;  // USB給電が止まった後自動で電源OFFするまでの時間（msec）。0は電源OFFしない。
-uint32_t last_discharge_time = 0;  // USB給電が止まったときの時間(msec)
+// auto poweroff
+uint32_t auto_power_off_time = 0;      // USB給電が止まった後自動で電源OFFするまでの時間（msec）。0は電源OFFしない。
+uint32_t last_discharge_time = 0;      // USB給電が止まったときの時間(msec)
 uint32_t power_check_interval = 10000; // 充電状態をチェックする時間
-uint32_t last_power_check_time = 0; // 最後にチェックした時間
+uint32_t last_power_check_time = 0;    // 最後にチェックした時間
 
 // Multi Threads Settings
 TaskHandle_t lipsyncTaskHandle;
 SemaphoreHandle_t xMutex = NULL;
 
-void printDebug(const char *str) {
+void printDebug(const char *str)
+{
 #ifdef DEBUG
   Serial.println(str);
 #ifdef USE_WIFI
@@ -158,149 +175,177 @@ void printDebug(const char *str) {
 #endif
 }
 
-void printFreeHeap() {
-    char buf[250];
-    sprintf(buf, "Free Heap Size = %d\n", esp_get_free_heap_size());
-    printDebug(buf);
-    sprintf(buf, "Total PSRAM Size = %d\n", ESP.getPsramSize());
-    printDebug(buf);
-    sprintf(buf, "Free PSRAM Size = %d\n", ESP.getFreePsram());
-    printDebug(buf);
-
+void printFreeHeap()
+{
+  char buf[250];
+  sprintf(buf, "Free Heap Size = %d\n", esp_get_free_heap_size());
+  printDebug(buf);
+  sprintf(buf, "Total PSRAM Size = %d\n", ESP.getPsramSize());
+  printDebug(buf);
+  sprintf(buf, "Free PSRAM Size = %d\n", ESP.getFreePsram());
+  printDebug(buf);
 }
 
 // Start----- Task functions ----------
-void lipsync(void *args) {
+void lipsync(void *args)
+{
   // スレッド内でログを出そうとすると不具合が起きる場合があります。
-  DriveContext * ctx = reinterpret_cast<DriveContext *>(args);
+  DriveContext *ctx = reinterpret_cast<DriveContext *>(args);
   ImageAvatarLite *avatar = ctx->getAvatar();
-  for(;;) {
-     uint64_t level = 0;
+  for (;;)
+  {
+    uint64_t level = 0;
     auto buf = a2dp_sink.getBuffer();
-    if (buf) {
+    if (buf)
+    {
 #ifdef USE_LED
-      // buf[0]: LEFT
-      // buf[1]: RIGHT
-      switch(system_config.getLedLR()) {
+      if (USE_LED_ST)
+      {
+        // buf[0]: LEFT
+        // buf[1]: RIGHT
+        switch (system_config.getLedLR())
+        {
         case 1: // Left Only
-          level_led(abs(buf[0])*10/INT16_MAX,abs(buf[0])*10/INT16_MAX);
+          level_led(abs(buf[0]) * 10 / INT16_MAX, abs(buf[0]) * 10 / INT16_MAX);
           break;
         case 2: // Right Only
-          level_led(abs(buf[1])*10/INT16_MAX,abs(buf[1])*10/INT16_MAX);
+          level_led(abs(buf[1]) * 10 / INT16_MAX, abs(buf[1]) * 10 / INT16_MAX);
           break;
         default: // Stereo
-          level_led(abs(buf[1])*10/INT16_MAX,abs(buf[0])*10/INT16_MAX);
+          level_led(abs(buf[1]) * 10 / INT16_MAX, abs(buf[0]) * 10 / INT16_MAX);
           break;
+        }
       }
 #endif
       memcpy(raw_data, buf, WAVE_SIZE * 2 * sizeof(int16_t));
       fft.exec(raw_data);
       // リップシンクで抽出する範囲はここで指定(低音)0〜64（高音）
       // 抽出範囲を広げるとパフォーマンスに影響します。
-      for (size_t bx = 5; bx <= 32; ++bx) { 
+      for (size_t bx = 5; bx <= 32; ++bx)
+      {
         int32_t f = fft.get(bx);
         level += abs(f);
-        //Serial.printf("bx:%d, f:%d\n", bx, f) ;
+        // Serial.printf("bx:%d, f:%d\n", bx, f) ;
       }
-      //Serial.printf("level:%d\n", level >> 16);
+      // Serial.printf("level:%d\n", level >> 16);
     }
 
-    //Serial.printf("data=%d\n\r", level >> 16);
-    mouth_ratio = (float)(level >> 16)/lipsync_level_max;
-    if (mouth_ratio > 1.2f) {
-      if (mouth_ratio > 1.5f) {
+    // Serial.printf("data=%d\n\r", level >> 16);
+    mouth_ratio = (float)(level >> 16) / lipsync_level_max;
+    if (mouth_ratio > 1.2f)
+    {
+      if (mouth_ratio > 1.5f)
+      {
         lipsync_level_max += 10.0f; // リップシンク上限を大幅に超えるごとに上限を上げていく。
       }
       mouth_ratio = 1.2f;
     }
     avatar->setMouthOpen(mouth_ratio);
-    vTaskDelay(1/portTICK_PERIOD_MS);
-  }   
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+  }
 }
 
 #ifdef USE_SERVO
-void servoloop(void *args) {
+void servoloop(void *args)
+{
+  if (!USE_SERVO_ST)
+    return;
+
   long move_time = 0;
   long interval_time = 0;
   long move_x = 0;
   long move_y = 0;
   bool sing_mode = false;
-  for (;;) {
-    if (mouth_ratio == 0.0f) {
+  for (;;)
+  {
+    if (mouth_ratio == 0.0f)
+    {
       // 待機時の動き
       interval_time = random(interval_min, interval_max);
       move_time = random(interval_move_min, interval_move_max);
       lipsync_level_max = LIPSYNC_LEVEL_MAX; // リップシンク上限の初期化
       sing_mode = false;
-
-    } else {
+    }
+    else
+    {
       // 歌うモードの動き
       interval_time = random(sing_interval_min, sing_interval_max);
       move_time = random(sing_move_min, sing_move_max);
       sing_mode = true;
-    } 
-    
-//    Serial.printf("x:%f:y:%f\n", gaze_x, gaze_y);
+    }
+
+    //    Serial.printf("x:%f:y:%f\n", gaze_x, gaze_y);
     // X軸は90°から+-でランダムに左右にスイング
-    int random_move = random(15);  // ランダムに15°まで動かす
+    int random_move = random(15); // ランダムに15°まで動かす
     int direction = random(2);
-    if (direction == 0) {
+    if (direction == 0)
+    {
       move_x = 90 - mouth_ratio * 15 - random_move;
-    } else {
+    }
+    else
+    {
       move_x = 90 + mouth_ratio * 15 + random_move;
     }
     // Y軸は90°から上にスイング（最大35°）
     move_y = 90 - mouth_ratio * 10 - random_move;
     servo.moveXY(move_x, move_y, move_time, move_time);
-    if (sing_mode) {
+    if (sing_mode)
+    {
       // 歌っているときはうなずく
       servo.moveXY(move_x, move_y + 10, 400, 400);
     }
-    vTaskDelay(interval_time/portTICK_PERIOD_MS);
-
+    vTaskDelay(interval_time / portTICK_PERIOD_MS);
   }
 }
 #endif
 
-void startThreads() {
+void startThreads()
+{
 #ifdef USE_SERVO
-  //servo.check();
+  if (!USE_SERVO_ST)
+    return;
+
+  // servo.check();
   delay(2000);
   xTaskCreateUniversal(servoloop,
-                        "servoloop",
-                        4096,
-                        NULL,
-                        9,
-                        &servoloopTaskHangle,
-                        APP_CPU_NUM);
+                       "servoloop",
+                       4096,
+                       NULL,
+                       9,
+                       &servoloopTaskHangle,
+                       APP_CPU_NUM);
   servo_enable = system_config.getServoRandomMode();
- // サーボの動きはservo_enableで管理
-  if (servo_enable) {
+  // サーボの動きはservo_enableで管理
+  if (servo_enable)
+  {
     vTaskResume(servoloopTaskHangle);
-  } else {
+  }
+  else
+  {
     vTaskSuspend(servoloopTaskHangle);
   }
 #endif
 }
 
-//void hvt_event_callback(int avatar_expression) {
-  //avatar.setExpression(0);
-  ////avatar.setExpression(avatar_expression);
+// void hvt_event_callback(int avatar_expression) {
+// avatar.setExpression(0);
+////avatar.setExpression(avatar_expression);
 //}
 
-//void avrc_metadata_callback(uint8_t data1, const uint8_t *data2)
+// void avrc_metadata_callback(uint8_t data1, const uint8_t *data2)
 //{
-  //Serial.printf("AVRC metadata rsp: attribute id 0x%x, %s\n", data1, data2);
-  //if (sing_happy) {
-    //avatar.setExpression(0);
-  //} else {
-    //avatar.setExpression(0);
-  //}
-  //sing_happy = !sing_happy;
+// Serial.printf("AVRC metadata rsp: attribute id 0x%x, %s\n", data1, data2);
+// if (sing_happy) {
+// avatar.setExpression(0);
+//} else {
+// avatar.setExpression(0);
+//}
+// sing_happy = !sing_happy;
 
 //}
 
-void setup() {
+void setup()
+{
   auto cfg = M5.config();
   cfg.output_power = true;
 #ifdef ARDUINO_M5STACK_FIRE
@@ -308,22 +353,26 @@ void setup() {
 #endif
   M5.begin(cfg);
 
+  // ***** for SD-Updater *********************
+  SDU_lobby();
+  // ******************************************
+
   { /// custom setting
     auto spk_cfg = M5.Speaker.config();
     /// Increasing the sample_rate will improve the sound quality instead of increasing the CPU load.
-    spk_cfg.sample_rate = 96000; // default:64000 (64kHz)  e.g. 48000 , 50000 , 80000 , 96000 , 100000 , 128000 , 144000 , 192000 , 200000
-    spk_cfg.task_pinned_core = PRO_CPU_NUM;//APP_CPU_NUM;
-    spk_cfg.task_priority = 1;//configMAX_PRIORITIES - 2;
+    spk_cfg.sample_rate = 96000;            // default:64000 (64kHz)  e.g. 48000 , 50000 , 80000 , 96000 , 100000 , 128000 , 144000 , 192000 , 200000
+    spk_cfg.task_pinned_core = PRO_CPU_NUM; // APP_CPU_NUM;
+    spk_cfg.task_priority = 1;              // configMAX_PRIORITIES - 2;
     spk_cfg.dma_buf_count = 8;
-    //spk_cfg.stereo = true;
+    // spk_cfg.stereo = true;
     spk_cfg.dma_buf_len = 512;
     M5.Speaker.config(spk_cfg);
   }
-  //checkSDUpdater( SD, MENU_BIN, 2000, TFCARD_CS_PIN ); // Filesystem, Launcher bin path, Wait delay
+  // checkSDUpdater( SD, MENU_BIN, 2000, TFCARD_CS_PIN ); // Filesystem, Launcher bin path, Wait delay
   xMutex = xSemaphoreCreateMutex();
   SPIFFS.begin();
   SD.begin(GPIO_NUM_4, SPI, 25000000);
-  
+
   system_config.loadConfig(json_fs, avatar_system_json);
   system_config.printAllParameters();
   M5.Speaker.setVolume(system_config.getVolume());
@@ -332,22 +381,35 @@ void setup() {
   Serial.printf("ChannelVolume: %d\n", M5.Speaker.getChannelVolume(m5spk_virtual_channel));
   M5.Lcd.setBrightness(system_config.getLcdBrightness());
 
-  
 #ifdef USE_SERVO
-  // 2022.4.26 ServoConfig.jsonを先に読まないと失敗する。（原因不明）
-  
-  servo.init(json_fs, system_config.getServoJsonFilename().c_str());
-  servo.attachAll();
+  // ***** read servo.txt *********************
+  if (!servoTxtSDRead())
+    USE_SERVO_ST = false;
+  // ******************************************
+  if (USE_SERVO_ST)
+  {
+    // 2022.4.26 ServoConfig.jsonを先に読まないと失敗する。（原因不明）
+    servo.init(json_fs, system_config.getServoJsonFilename().c_str());
+    servo.attachAll();
+  }
 #endif
+
 #ifdef USE_LED
-  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);  // GRB ordering is typical
-  #ifdef USE_LED_OUT
-  FastLED.addLeds<WS2812, LED_PIN_OUT, GRB>(leds_out, NUM_LED_OUT);
-  #endif
-  FastLED.setBrightness(32);
-  level_led(5, 5);
-  delay(1000);
-  turn_off_led();
+  // ***** read servo.txt *********************
+  if (!ledTxtSDRead())
+    USE_LED_ST = false;
+  // ******************************************
+  if (USE_LED_ST)
+  {
+    FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS); // GRB ordering is typical
+#ifdef USE_LED_OUT
+    FastLED.addLeds<WS2812, LED_PIN_OUT, GRB>(leds_out, NUM_LED_OUT);
+#endif
+    FastLED.setBrightness(32);
+    level_led(5, 5);
+    delay(1000);
+    turn_off_led();
+  }
 #endif
 
   auto_power_off_time = system_config.getAutoPowerOffTime();
@@ -358,32 +420,40 @@ void setup() {
   // 音のズレや途切れが気になるときは下記のlipsyncのtask_priorityを3にしてください。(口パクが遅くなります。)
   // I2Sのバッファ関連の設定を調整する必要がある場合もあり。
   avatar.addTask(lipsync, "lipsync", 2);
-  //a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
-  //a2dp_sink.setHvtEventCallback(hvt_event_callback);
+  // a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
+  // a2dp_sink.setHvtEventCallback(hvt_event_callback);
   a2dp_sink.start(system_config.getBluetoothDeviceName().c_str(), system_config.getBluetoothReconnect());
   startThreads();
   last_power_check_time = millis();
-
 }
 
-void loop() {
+void loop()
+{
   M5.update();
-  printFreeHeap();
+  // printFreeHeap();
+
 #ifdef USE_SERVO
-  if (M5.BtnA.pressedFor(2000)) {
-    M5.Speaker.tone(600, 500);
-    delay(500);
-    M5.Speaker.tone(800, 200);
-    // サーボチェックをします。
-    vTaskSuspend(servoloopTaskHangle); // ランダムな動きを止める。
-    servo.check();
-    vTaskResume(servoloopTaskHangle);  // ランダムな動きを再開
+  if (USE_SERVO_ST)
+  {
+    if (M5.BtnA.pressedFor(2000))
+    {
+      M5.Speaker.tone(600, 500);
+      delay(500);
+      M5.Speaker.tone(800, 200);
+      // サーボチェックをします。
+      vTaskSuspend(servoloopTaskHangle); // ランダムな動きを止める。
+      servo.check();
+      vTaskResume(servoloopTaskHangle); // ランダムな動きを再開
+    }
   }
 #endif
-  if (M5.BtnA.wasClicked()) {
+
+  if (M5.BtnA.wasClicked())
+  {
     // アバターを変更します。
     avatar_count++;
-    if (avatar_count >= system_config.getAvatarMaxCount()) {
+    if (avatar_count >= system_config.getAvatarMaxCount())
+    {
       avatar_count = 0;
     }
     Serial.printf("Avatar No:%d\n", avatar_count);
@@ -392,32 +462,41 @@ void loop() {
   }
 
 #ifdef USE_SERVO
-  if (M5.BtnB.pressedFor(2000)) {
-    // サーボを動かす＜＞止めるの切り替え
-    servo_enable = !servo_enable;
-    Serial.printf("BtnB was pressed servo_enable:%d", servo_enable);
-    if (servo_enable) {
-      M5.Speaker.tone(500, 200);
-      delay(200);
-      M5.Speaker.tone(700, 200);
-      delay(200);
-      M5.Speaker.tone(1000, 200);
-      vTaskResume(servoloopTaskHangle);
-    } else {
-      M5.Speaker.tone(1000, 200);
-      delay(200);
-      M5.Speaker.tone(700, 200);
-      delay(200);
-      M5.Speaker.tone(500, 200);
-      vTaskSuspend(servoloopTaskHangle);
+  if (USE_SERVO_ST)
+  {
+    if (M5.BtnB.pressedFor(2000))
+    {
+      // サーボを動かす＜＞止めるの切り替え
+      servo_enable = !servo_enable;
+      Serial.printf("BtnB was pressed servo_enable:%d", servo_enable);
+      if (servo_enable)
+      {
+        M5.Speaker.tone(500, 200);
+        delay(200);
+        M5.Speaker.tone(700, 200);
+        delay(200);
+        M5.Speaker.tone(1000, 200);
+        vTaskResume(servoloopTaskHangle);
+      }
+      else
+      {
+        M5.Speaker.tone(1000, 200);
+        delay(200);
+        M5.Speaker.tone(700, 200);
+        delay(200);
+        M5.Speaker.tone(500, 200);
+        vTaskSuspend(servoloopTaskHangle);
+      }
     }
   }
 #endif
 
-  if (M5.BtnB.wasClicked()) {
+  if (M5.BtnB.wasClicked())
+  {
     size_t v = M5.Speaker.getChannelVolume(m5spk_virtual_channel);
     v += 10;
-    if (v <= 255) {
+    if (v <= 255)
+    {
       M5.Speaker.setVolume(v);
       M5.Speaker.setChannelVolume(m5spk_virtual_channel, v);
       Serial.printf("Volume: %d\n", v);
@@ -426,25 +505,28 @@ void loop() {
     }
   }
 
-
-  if (M5.BtnC.pressedFor(2000)) {
+  if (M5.BtnC.pressedFor(2000))
+  {
     M5.Speaker.tone(1000, 100);
     delay(500);
     M5.Speaker.tone(600, 100);
     // 表情を切り替え
     expression++;
     Serial.printf("ExpressionMax:%d\n", avatar.getExpressionMax());
-    if (expression >= avatar.getExpressionMax()) {
+    if (expression >= avatar.getExpressionMax())
+    {
       expression = 0;
     }
     Serial.printf("----------Expression: %d----------\n", expression);
     avatar.setExpression(system_config.getAvatarJsonFilename(avatar_count).c_str(), expression);
     Serial.printf("Resume\n");
   }
-  if (M5.BtnC.wasClicked()) {
+  if (M5.BtnC.wasClicked())
+  {
     size_t v = M5.Speaker.getChannelVolume(m5spk_virtual_channel);
     v -= 10;
-    if (v > 0) {
+    if (v > 0)
+    {
       M5.Speaker.setVolume(v);
       M5.Speaker.setChannelVolume(m5spk_virtual_channel, v);
       Serial.printf("Volume: %d\n", v);
@@ -453,23 +535,31 @@ void loop() {
     }
   }
 #ifndef ARDUINO_M5STACK_FIRE // FireはAxp192ではないのとI2Cが使えないので制御できません。
-  if ((millis()-last_power_check_time) > power_check_interval) {
-    if (M5.Power.Axp192.getACINVolatge() < 3.0f) {
+  if ((millis() - last_power_check_time) > power_check_interval)
+  {
+    if (M5.Power.Axp192.getACINVolatge() < 3.0f)
+    {
       // USBからの給電が停止したとき
       // Serial.println("USBPowerUnPluged.");
       M5.Power.setLed(0);
-      if ((auto_power_off_time > 0) and (last_discharge_time == 0)) {
+      if ((auto_power_off_time > 0) and (last_discharge_time == 0))
+      {
         M5.Speaker.tone(1000, 100);
         delay(500);
         M5.Speaker.tone(800, 100);
         last_discharge_time = millis();
-      } else if ((auto_power_off_time > 0) and ((millis() - last_discharge_time) > auto_power_off_time)) {
+      }
+      else if ((auto_power_off_time > 0) and ((millis() - last_discharge_time) > auto_power_off_time))
+      {
         M5.Power.powerOff();
       }
-    } else {
-      //Serial.println("USBPowerPluged.");
+    }
+    else
+    {
+      // Serial.println("USBPowerPluged.");
       M5.Power.setLed(80);
-      if (last_discharge_time > 0) {
+      if (last_discharge_time > 0)
+      {
         last_discharge_time = 0;
       }
     }
