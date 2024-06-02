@@ -1,11 +1,11 @@
 # SDU-M5Core2ImageAvatarLite
 SD-Updaterに対応したM5Core2ImageAvatarLiteです。<br>
-サーボ、LED、およびbluetoothスピーカを動作させ、Avatarの表情の変化を確認できます。<br>
-独自Avatarを作成するための開発ツールとして活用できます。<br>
+Avatarが、サーボ・LED・bluetoothスピーカ音声とコラボして変化します。<br>楽しいです。<br>
+独自Avatarの開発ツールとして活用できます。<br>
 <br>
 mongonta0716 さんのソフトから次の修正を行いました。<br>
 - SD-Updater対応。
-- USE_SERVO on/off およびPIN番号の設定を外部ファイル（servo.txt）で設定。
+- USE_SERVO on/off を外部ファイル（servo.txt）で設定。
 - USE_LED on/offを外部ファイル（led.txt）で設定。
 
 ブート時に、SD_Updater用の画面が立ち上がります。<br>
@@ -19,11 +19,9 @@ SD直下に置いてください。
 
 - servo.txt<br>
 １行目(USE_SERVO)： "on" または、 "off"<br>
-２行目(SERVO_PIN_X) ： "13"(PortC)　または、"33"(PortA)<br>
-３行目(SERVO_PIN_Y) ： "14"(Portc)　または、"32"(PortA)<br>
 
-サーボを使用しない場合は、１行目に "off"　を記載してください。<br>
-サーボを使用する場合は、１行目に "on"　を記載してください。<br>
+サーボを使用しない場合は、"off"　<br>
+サーボを使用する場合は、　"on"　<br>
 
 <b>２行目・３行目は、このソフトでは参照していません。<br>
 その他のサーボ設定は、SD内の"/json/M5AvatarLiteServo.json"を使用します。</b>
@@ -32,8 +30,8 @@ SD直下に置いてください。
 - led.txt<br>
 １行目(USE_LED)： "on" または、 "off"<br>
 
-LEDを使用しない場合は、１行目に "off"　を記載してください。<br>
-LEDを使用する場合は、１行目に "on"　を記載してください。<br>
+LEDを使用しない場合は、 "off"<br>
+LEDを使用する場合は、 　"on"　<br>
 
 <br>
 
@@ -53,7 +51,7 @@ LEDを使用する場合は、１行目に "on"　を記載してください。
 
 ### SDカード
 設定ファイル"servo.txt", "led.txt"および、 jsonフォルダ下に設定データが必要です。<br>
-また、Avatarの画像データの"bmp_xxx"ファルダをすべてSDのルートにコピーしてください。<br>
+また、Avatarの画像データの全ての"bmp_xxx"ファルダごとSDのルートにコピーしてください。<br>
 <br>
 
 
