@@ -1,3 +1,94 @@
+# SDU-M5Core2ImageAvatarLite
+SD-Updaterに対応したM5Core2ImageAvatarLiteです。<br>
+サーボ、LED、およびbluetoothスピーカを動作させ、Avatarの表情変化を確認できます。<br>
+とても楽しいソフトです。<br>
+独自仕様のAvatarを作成するための開発ツールです。<br>
+<br>
+
+mongonta0716 さんのソフトから次の修正を行いました。<br>
+
+- SD-Updater対応。
+- USE_SERVO on/off およびPIN番号の設定を外部ファイル（servo.txt）で設定。
+- USE_LED on/offを外部ファイル（led.txt）で設定。
+
+ブート時に、SD_Updater用の画面が立ち上がります。<br>
+SDに入れたソフトを切り替えることができるようになります。<br>
+<br>
+
+
+
+## 設定ファイル
+SD直下に置いてください。
+
+- servo.txt<br>
+１行目(USE_SERVO)： "on" または、 "off"<br>
+２行目(SERVO_PIN_X) ： "13"(PortC)　または、"33"(PortA)<br>
+３行目(SERVO_PIN_Y) ： "14"(Portc)　または、"32"(PortA)<br>
+
+サーボを使用しない場合は、１行目に "off"　を記載してください。<br>
+サーボを使用する場合は、１行目に "on"　を記載してください。<br>
+
+<b>２行目・３行目は、このソフトでは参照していません。<br>
+その他のサーボ設定は、SD内の"/json/M5AvatarLiteServo.json"を使用します。</b>
+<br><br>
+
+- led.txt<br>
+１行目(USE_LED)： "on" または、 "off"<br>
+
+LEDを使用しない場合は、１行目に "off"　を記載してください。<br>
+LEDを使用する場合は、１行目に "on"　を記載してください。<br>
+
+<br>
+
+## 必要なもの
+### 本体<br>
+いずれかを用意してください。<br>
+・M5Stack Core2 for AWS<br>
+・M5Stack Core2 <br>
+・M5Stack Core2 v1.1　（未確認）<br>
+<br>
+
+### サーボ
+・SG90　または互換<br>
+・サーボなしの場合は、servo.txt の1行目を"off"にしてください。<br>
+・サーボポートは、PortAまたは、PortC のどちらも対応。<br>
+<br>
+
+### SDカード
+設定ファイル"servo.txt", "led.txt"および、 jsonフォルダ下に設定データが必要です。<br>
+また、Avatarの画像データの"bmp_xxx"ファルダをすべてSDのルートにコピーしてください。<br>
+<br>
+
+
+## 最新BINの取得
+コンパイル済みの最新BINファイルは、下記のリポジトリから取得できます。
+- [BinsPack-for-StackChan-Core2](https://github.com/NoRi-230401/BinsPack-for-StackChan-Core2)<br>
+<br>
+
+
+## SD-Updaterについて
+tobozoさん開発。SDに複数のBINファイルを入れて、ソフトを切替えて使用できるようになります。<br>
+
+ https://github.com/tobozo/M5Stack-SD-Updater<br><br>
+
+
+タカオさん、2023/7/29 ｽﾀｯｸﾁｬﾝ お誕生日会 2023のLTで、M5Stack-SD-Updaterの概要を説明した時のスライド<br>
+https://speakerdeck.com/mongonta0716/sutatukutiyandefu-shu-apuriwoqie-riti-erutekunituku
+
+<br><br>
+
+
+## 基のリポジトリ
+- [M5Core2ImageAvatarLite　(mongonta0716さん)](https://github.com/mongonta0716/M5Core2ImageAvatarLite)<br>
+<br>
+<br><br>
+
+ここから、基のソフトの説明書です。
+
+-----
+
+
+
 # M5Core2ImageAvatarLite
  ImageAvatarLite for M5Stack Core2 and M5Stack Fire
 
