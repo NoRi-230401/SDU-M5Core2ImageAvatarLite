@@ -1,12 +1,9 @@
 # SDU-M5Core2ImageAvatarLite
 SD-Updaterに対応したM5Core2ImageAvatarLiteです。<br>
-サーボ、LED、およびbluetoothスピーカを動作させ、Avatarの表情変化を確認できます。<br>
-とても楽しいソフトです。<br>
-独自仕様のAvatarを作成するための開発ツールです。<br>
+サーボ、LED、およびbluetoothスピーカを動作させ、Avatarの表情の変化を確認できます。<br>
+独自Avatarを作成するための開発ツールとして活用できます。<br>
 <br>
-
 mongonta0716 さんのソフトから次の修正を行いました。<br>
-
 - SD-Updater対応。
 - USE_SERVO on/off およびPIN番号の設定を外部ファイル（servo.txt）で設定。
 - USE_LED on/offを外部ファイル（led.txt）で設定。
